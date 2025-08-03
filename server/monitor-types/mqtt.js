@@ -110,7 +110,12 @@ class MqttMonitorType extends MonitorType {
             });
 
             client.on("message", (messageTopic, message) => {
-                if (messageTopic === topic) {
+                // For wildcard topics, MQTT broker handles the matching
+                // For exact topics, we verify the match
+                const isWildcardTopic = topic.includes('+') || topic.includes('#');
+                const isTopicMatch = isWildcardTopic || messageTopic === topic;
+                
+                if (isTopicMatch) {
                     client.end();
                     clearTimeout(timeoutID);
                     resolve(message.toString("utf8"));

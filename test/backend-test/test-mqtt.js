@@ -13,13 +13,26 @@ const { UP, PENDING } = require("../../src/util");
  * @returns {Promise<Heartbeat>} the heartbeat produced by the check
  */
 async function testMqtt(mqttSuccessMessage, mqttCheckType, receivedMessage) {
+    return testMqttWithTopic("test", "test", mqttSuccessMessage, mqttCheckType, receivedMessage);
+}
+
+/**
+ * Runs an MQTT test with custom topic configuration
+ * @param {string} subscriptionTopic the topic to subscribe to (can include wildcards)
+ * @param {string} publishTopic the topic to publish the message to
+ * @param {string} mqttSuccessMessage the message that the monitor expects
+ * @param {null|"keyword"|"json-query"} mqttCheckType the type of check we perform
+ * @param {string} receivedMessage what message is received from the mqtt channel
+ * @returns {Promise<Heartbeat>} the heartbeat produced by the check
+ */
+async function testMqttWithTopic(subscriptionTopic, publishTopic, mqttSuccessMessage, mqttCheckType, receivedMessage) {
     const hiveMQContainer = await new HiveMQContainer().start();
     const connectionString = hiveMQContainer.getConnectionString();
     const mqttMonitorType = new MqttMonitorType();
     const monitor = {
         jsonPath: "firstProp", // always return firstProp for the json-query monitor
         hostname: connectionString.split(":", 2).join(":"),
-        mqttTopic: "test",
+        mqttTopic: subscriptionTopic,
         port: connectionString.split(":")[2],
         mqttUsername: null,
         mqttPassword: null,
@@ -36,9 +49,9 @@ async function testMqtt(mqttSuccessMessage, mqttCheckType, receivedMessage) {
 
     const testMqttClient = mqtt.connect(hiveMQContainer.getConnectionString());
     testMqttClient.on("connect", () => {
-        testMqttClient.subscribe("test", (error) => {
+        testMqttClient.subscribe(publishTopic, (error) => {
             if (!error) {
-                testMqttClient.publish("test", receivedMessage);
+                testMqttClient.publish(publishTopic, receivedMessage);
             }
         });
     });
@@ -99,5 +112,23 @@ describe("MqttMonitorType", {
             testMqtt("[wrong_success_messsage]", "json-query", "{\"firstProp\":\"present\"}"),
             new Error("Message received but value is not equal to expected value, value was: [present]")
         );
+    });
+
+    test("wildcard topic with + (single-level wildcard)", async () => {
+        const heartbeat = await testMqttWithTopic("device/+/sensor", "device/bedroom/sensor", "KEYWORD", "keyword", "-> KEYWORD <-");
+        assert.strictEqual(heartbeat.status, UP);
+        assert.strictEqual(heartbeat.msg, "Topic: device/+/sensor; Message: -> KEYWORD <-");
+    });
+
+    test("wildcard topic with # (multi-level wildcard)", async () => {
+        const heartbeat = await testMqttWithTopic("device/#", "device/bedroom/sensor/temperature", "KEYWORD", "keyword", "-> KEYWORD <-");
+        assert.strictEqual(heartbeat.status, UP);
+        assert.strictEqual(heartbeat.msg, "Topic: device/#; Message: -> KEYWORD <-");
+    });
+
+    test("wildcard topic complex pattern with + and levels", async () => {
+        const heartbeat = await testMqttWithTopic("device/+/sensor/+", "device/bedroom/sensor/temperature", "TEMP_OK", "keyword", "TEMP_OK");
+        assert.strictEqual(heartbeat.status, UP);
+        assert.strictEqual(heartbeat.msg, "Topic: device/+/sensor/+; Message: TEMP_OK");
     });
 });

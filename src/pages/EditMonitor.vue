@@ -486,7 +486,8 @@
                                     <label for="mqttTopic" class="form-label">MQTT {{ $t("Topic") }}</label>
                                     <input id="mqttTopic" v-model="monitor.mqttTopic" type="text" class="form-control" required>
                                     <div class="form-text">
-                                        {{ $t("topicExplanation") }}
+                                        {{ $t("topicExplanation") }}<br>
+                                        Examples: <code>sensor/temperature</code>, <code>device/+/status</code>, <code>data/#</code>
                                     </div>
                                 </div>
 
