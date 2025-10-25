@@ -266,7 +266,7 @@
     "steamApiKeyDescription": "For monitoring a Steam Game Server you need a Steam Web-API key. You can register your API key here: ",
     "Current User": "Current User",
     "topic": "Topic",
-    "topicExplanation": "MQTT topic to monitor",
+    "topicExplanation": "MQTT topic to monitor. Supports wildcards: + (single level) and # (multi-level)",
     "mqttWebSocketPath": "MQTT WebSocket Path",
     "mqttWebsocketPathExplanation": "WebSocket path for MQTT over WebSocket connections (e.g., /mqtt)",
     "mqttWebsocketPathInvalid": "Please use a valid WebSocket Path format",
